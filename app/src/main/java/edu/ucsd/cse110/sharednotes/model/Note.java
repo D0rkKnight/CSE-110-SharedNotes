@@ -14,7 +14,6 @@ import com.google.gson.stream.JsonWriter;
 
 import java.time.Instant;
 
-
 @Entity(tableName = "notes")
 public class Note {
     /** The title of the note. Used as the primary key for shared notes (even on the cloud). */
@@ -33,7 +32,6 @@ public class Note {
      * Defaults to 0 (Jan 1, 1970), so that if a note already exists remotely, its content is
      * always preferred to a new empty note.
      */
-
     @SerializedName(value = "version")
     public long version = 0;
 
