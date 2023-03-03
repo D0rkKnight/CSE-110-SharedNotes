@@ -1,10 +1,15 @@
 package edu.ucsd.cse110.sharednotes.model;
 
+import android.os.Handler;
+import android.util.Log;
+
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 public class NoteRepository {
@@ -91,7 +96,28 @@ public class NoteRepository {
         // you don't create a new polling thread every time you call getRemote with the same title.
         // You don't need to worry about killing background threads.
 
-        throw new UnsupportedOperationException("Not implemented yet");
+        // This provides the livedata. So it's just one object that we can observe.
+        NoteAPI api = new NoteAPI();
+        var livedata = new MutableLiveData<Note>();
+
+        // Run this on another thread too
+        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+
+        // This is the background thread that will poll the server every 3 seconds.
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                var newNote = api.getNote(title);
+                livedata.setValue(newNote);
+
+                Log.d("NoteRepository", "Polling server for note " + title);
+            }
+        };
+
+        // Is it safe to execute then schedule?
+        executor.scheduleAtFixedRate(runnable, 0, 3, java.util.concurrent.TimeUnit.SECONDS);
+
+        return livedata;
     }
 
     public void upsertRemote(Note note) {

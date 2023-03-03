@@ -3,16 +3,19 @@ package edu.ucsd.cse110.sharednotes.model;
 import android.util.Log;
 
 import androidx.annotation.AnyThread;
-import androidx.annotation.MainThread;
 import androidx.annotation.WorkerThread;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
+import java.util.Date;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 
 public class NoteAPI {
     // TODO: Implement the API using OkHttp!
@@ -58,6 +61,53 @@ public class NoteAPI {
             assert response.body() != null;
             var body = response.body().string();
             Log.i("ECHO", body);
+            return body;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    @WorkerThread
+    public Note getNote(String noteId) {
+        var request = new Request.Builder()
+                .url("https://sharednotes.goto.ucsd.edu/notes/" + noteId)
+                .method("GET", null)
+                .build();
+
+        try (var response = client.newCall(request).execute()) {
+            assert response.body() != null;
+            var body = response.body().string();
+            Log.i("GET", body);
+
+            // Build body into json then Note object
+            var note = Note.fromJSON(body);
+
+            return note;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    @WorkerThread
+    public String putNote(Note note) {
+
+        // Build json with note and timestamp
+        var json = note.toJSON();
+        RequestBody requestBody = RequestBody.create(json.toString(), MediaType.parse("application/json; charset=utf-8"));
+
+        var request = new Request.Builder()
+                .url("https://sharednotes.goto.ucsd.edu/notes/" + note.title)
+                .put(requestBody)
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Accept", "application/json")
+                .build();
+
+        try (var response = client.newCall(request).execute()) {
+            assert response.body() != null;
+            var body = response.body().string();
+            Log.i("PUT", body);
             return body;
         } catch (Exception e) {
             e.printStackTrace();

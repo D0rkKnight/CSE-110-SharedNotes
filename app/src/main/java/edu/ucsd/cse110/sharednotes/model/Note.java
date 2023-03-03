@@ -71,4 +71,8 @@ public class Note {
     public String toJSON() {
         return new Gson().toJson(this);
     }
+
+    public boolean equals(Note other) {
+        return this.title.equals(other.title) && this.content.equals(other.content) && this.updatedAt == other.updatedAt;
+    }
 }
