@@ -11,12 +11,20 @@ import androidx.lifecycle.Observer;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 
 public class NoteRepository {
     private final NoteDao dao;
+    private NoteAPI noteAPI;
+    private MediatorLiveData<Note> timeData;
+    private ScheduledFuture<?> clockFuture;
 
     public NoteRepository(NoteDao dao) {
+
         this.dao = dao;
+
+        this.noteAPI = NoteAPI.provide();
+        this.timeData = new MediatorLiveData<>();
     }
 
     // Synced Methods
@@ -39,7 +47,7 @@ public class NoteRepository {
         Observer<Note> updateFromRemote = theirNote -> {
             var ourNote = note.getValue();
             if (theirNote == null) return; // do nothing
-            if (ourNote == null || ourNote.updatedAt < theirNote.updatedAt) {
+            if (ourNote == null || ourNote.version < theirNote.version) {
                 upsertLocal(theirNote);
             }
         };
@@ -69,7 +77,7 @@ public class NoteRepository {
     }
 
     public void upsertLocal(Note note) {
-        note.updatedAt = System.currentTimeMillis();
+        note.version ++;
         dao.upsert(note);
     }
 
@@ -97,20 +105,19 @@ public class NoteRepository {
         // You don't need to worry about killing background threads.
 
         // This provides the livedata. So it's just one object that we can observe.
-        NoteAPI api = new NoteAPI();
         var livedata = new MutableLiveData<Note>();
 
         // Run this on another thread too
-        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
         // This is the background thread that will poll the server every 3 seconds.
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                var newNote = api.getNote(title);
+                var newNote = noteAPI.getNote(title);
                 livedata.setValue(newNote);
 
-                Log.d("NoteRepository", "Polling server for note " + title);
+//                Log.d("NoteRepository", "Polling server for note " + title);
             }
         };
 
@@ -121,7 +128,18 @@ public class NoteRepository {
     }
 
     public void upsertRemote(Note note) {
-        // TODO: Implement upsertRemote!
+        // Implement upsertRemote!
+
+        var executor = Executors.newSingleThreadExecutor();
+        var runnable = new Runnable() {
+            @Override
+            public void run() {
+                noteAPI.putNote(note);
+            }
+        };
+        executor.submit(runnable);
+
+
         throw new UnsupportedOperationException("Not implemented yet");
     }
 }
