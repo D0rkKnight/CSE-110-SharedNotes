@@ -85,7 +85,7 @@ public class NoteAPI {
 
             return note;
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e("GET", e.toString());
             return null;
         }
     }

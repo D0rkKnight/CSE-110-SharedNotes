@@ -14,6 +14,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.Calendar;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import edu.ucsd.cse110.sharednotes.model.Note;
 import edu.ucsd.cse110.sharednotes.model.NoteAPI;
@@ -61,6 +64,43 @@ public class SharedNotesUnitTest {
         Note n = new Note("Test note 199", "This is a test note.", System.currentTimeMillis());
 
         var put1 = api.putNote(n);
+    }
+
+    @Test
+    public void executorTest() {
+
+        System.out.println("Starting test");
+
+        // Put a note
+        api.putNote(new Note(
+                "Test note 198.2",
+                "test 2",
+                0
+        ));
+
+        // Run this on another thread too
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+
+        // This is the background thread that will poll the server every 3 seconds.
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("Reached");
+                var newNote = api.getNote("Test note 198.2");
+                System.out.println("Polling server for note " + newNote.title);
+            }
+        };
+
+        // Is it safe to execute then schedule?
+        executor.scheduleAtFixedRate(runnable, 0, 1, TimeUnit.SECONDS);
+
+        // Pause the main thread to let the executor run.
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
     }
 
 }

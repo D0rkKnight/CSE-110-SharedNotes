@@ -10,6 +10,7 @@ import androidx.lifecycle.Observer;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -17,15 +18,12 @@ import java.util.concurrent.ScheduledFuture;
 public class NoteRepository {
     private final NoteDao dao;
     private NoteAPI noteAPI;
-    private MediatorLiveData<Note> timeData;
     private ScheduledFuture<?> poller; // what could this be for... hmm?
 
     public NoteRepository(NoteDao dao) {
 
         this.dao = dao;
-
         this.noteAPI = NoteAPI.provide();
-        this.timeData = new MediatorLiveData<>();
     }
 
     // Synced Methods
@@ -109,25 +107,12 @@ public class NoteRepository {
         // you don't create a new polling thread every time you call getRemote with the same title.
         // You don't need to worry about killing background threads.
 
-        // This provides the livedata. So it's just one object that we can observe.
-        var livedata = new MutableLiveData<Note>();
+        MutableLiveData<Note> livedata = new MutableLiveData<Note>();
 
-        // Run this on another thread too
-        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-
-        // This is the background thread that will poll the server every 3 seconds.
-        Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                var newNote = noteAPI.getNote(title);
-                livedata.setValue(newNote);
-
-//                Log.d("NoteRepository", "Polling server for note " + title);
-            }
-        };
-
-        // Is it safe to execute then schedule?
-        executor.scheduleAtFixedRate(runnable, 0, 3, java.util.concurrent.TimeUnit.SECONDS);
+        var executor = Executors.newSingleThreadScheduledExecutor();
+        poller = executor.scheduleAtFixedRate(() -> {
+            livedata.postValue(noteAPI.getNote(title));
+        }, 0, 3, java.util.concurrent.TimeUnit.SECONDS);
 
         return livedata;
     }
@@ -144,7 +129,6 @@ public class NoteRepository {
         };
         executor.submit(runnable);
 
-
-        throw new UnsupportedOperationException("Not implemented yet");
+        return;
     }
 }
