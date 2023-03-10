@@ -21,7 +21,6 @@ public class NoteRepository {
     private ScheduledFuture<?> poller; // what could this be for... hmm?
 
     public NoteRepository(NoteDao dao) {
-
         this.dao = dao;
         this.noteAPI = NoteAPI.provide();
     }
@@ -111,7 +110,13 @@ public class NoteRepository {
 
         var executor = Executors.newSingleThreadScheduledExecutor();
         poller = executor.scheduleAtFixedRate(() -> {
-            livedata.postValue(noteAPI.getNote(title));
+
+            Note note = noteAPI.getNote(title);
+
+            if (note != null && note.title != null)
+                livedata.postValue(note);
+            else
+                Log.d("NoteRepository", "Note is null!");
         }, 0, 3, java.util.concurrent.TimeUnit.SECONDS);
 
         return livedata;
